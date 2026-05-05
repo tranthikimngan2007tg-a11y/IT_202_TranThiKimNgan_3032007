@@ -22,7 +22,9 @@ CREATE TABLE player (
     CONSTRAINT FOREIGN KEY (team_code) REFERENCES team(team_code),
     CONSTRAINT FOREIGN KEY (match_id) REFERENCES matchs(match_id)
 );
+
 DROP TABLE phayer;
+
 CREATE TABLE matchs (
 	match_id VARCHAR(100) PRIMARY KEY,
     start_time DATETIME DEFAULT CURRENT_TIMESTAMP,

@@ -115,9 +115,6 @@ BEGIN
   IF  total_debt < 0 THEN
     ROLLBACK;
   ELSE
-    UPDATE students
-    SET total_debt = v_new_debt
-    WHERE student_id = 'SV01';
     COMMIT;
   END IF;
 END //

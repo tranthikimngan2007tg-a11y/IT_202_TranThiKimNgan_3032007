@@ -99,3 +99,166 @@ AND driver_id IN (
 DELETE FROM race_results
 WHERE finish_position > 20;
 
+SELECT
+    full_name,
+    driver_number,
+    nationality
+FROM drivers
+WHERE annual_salary > 20000000
+   OR nationality = 'Dutch';
+
+SELECT
+    team_name,
+    hq_country
+FROM teams
+WHERE current_rank BETWEEN 1 AND 3
+AND (
+        hq_country LIKE 'M%'
+        OR hq_country LIKE 'G%'
+    );
+
+
+SELECT
+    race_id,
+    race_name,
+    race_date
+FROM races
+ORDER BY race_date DESC
+LIMIT 2 OFFSET 2;
+
+SELECT
+    d.full_name,
+    t.team_name,
+    SUM(rr.points_earned) AS total_points,
+    MAX(rr.fastest_lap_speed) AS highest_fastest_lap_speed
+
+FROM drivers d
+
+JOIN teams t
+ON d.team_id = t.team_id
+
+JOIN race_results rr
+ON d.driver_id = rr.driver_id
+
+GROUP BY d.driver_id, d.full_name, t.team_name;
+
+SELECT
+    t.team_name,
+    SUM(rr.points_earned) AS total_team_points
+
+FROM teams t
+
+JOIN drivers d
+ON t.team_id = d.team_id
+
+JOIN race_results rr
+ON d.driver_id = rr.driver_id
+
+GROUP BY t.team_id, t.team_name
+
+HAVING SUM(rr.points_earned) > 50;
+
+SELECT
+    driver_id,
+    full_name,
+    annual_salary
+FROM drivers
+WHERE annual_salary = (
+    SELECT MAX(annual_salary)
+    FROM drivers
+);
+
+CREATE INDEX idx_driver_perf
+ON race_results(finish_position, points_earned);
+
+CREATE VIEW view_team_financials AS
+
+SELECT
+    t.team_name,
+    COUNT(d.driver_id) AS total_drivers,
+    SUM(d.annual_salary) AS total_salary_budget
+
+FROM teams t
+
+JOIN drivers d
+ON t.team_id = d.team_id
+
+WHERE d.annual_salary > 0
+
+GROUP BY t.team_id, t.team_name;
+
+DELIMITER //
+
+CREATE TRIGGER trg_bonus_salary
+AFTER INSERT ON race_results
+FOR EACH ROW
+
+BEGIN
+
+    IF NEW.points_earned > 25 THEN
+
+        UPDATE drivers
+        SET annual_salary = annual_salary + 50000
+        WHERE driver_id = NEW.driver_id;
+
+    END IF;
+
+END //
+
+DELIMITER ;
+
+INSERT INTO races(race_name, circuit_name, race_date)
+VALUES
+('Test GP', 'Test Circuit', NOW());
+
+INSERT INTO race_results
+(driver_id, race_id, grid_position, finish_position, points_earned, fastest_lap_speed)
+VALUES
+(2, 6, 1, 1, 30.0, 246.00);
+
+SELECT
+    full_name,
+    annual_salary
+FROM drivers
+WHERE driver_id = 2;
+
+DELIMITER //
+
+CREATE TRIGGER trg_update_constructor_points
+AFTER UPDATE ON races
+FOR EACH ROW
+
+BEGIN
+
+    IF NEW.race_status = 'Finished'
+       AND OLD.race_status <> 'Finished' THEN
+
+        UPDATE constructors_championship cc
+
+        JOIN teams t
+            ON cc.team_id = t.team_id
+
+        JOIN drivers d
+            ON t.team_id = d.team_id
+
+        JOIN race_results rr
+            ON d.driver_id = rr.driver_id
+
+        SET cc.total_points = cc.total_points + 10
+
+        WHERE rr.race_id = NEW.race_id
+          AND rr.finish_position = 1;
+
+    END IF;
+
+END //
+
+DELIMITER ;
+
+SELECT * FROM view_team_financials;
+UPDATE races
+SET race_status = 'Finished'
+WHERE race_id = 4;
+
+SELECT *
+FROM constructors_championship;
